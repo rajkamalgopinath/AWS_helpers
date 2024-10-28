@@ -28,12 +28,22 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--n_estimators", type=int, default=100)
     parser.add_argument("--max_depth", type=int, default=None)
-    parser.add_argument("--train", type=str, default="train.csv")
+    parser.add_argument("--train", type=str, default="train.csv")  # Optional argument for local testing
 
     args = parser.parse_args()
     
+    # Detect if running on SageMaker or locally
+    if "SM_CHANNEL_TRAIN" in os.environ:
+        # SageMaker environment
+        input_data_path = os.path.join(os.environ["SM_CHANNEL_TRAIN"], "train.csv")
+        model_output_path = os.path.join(os.environ["SM_MODEL_DIR"], "model.joblib")
+    else:
+        # Local environment
+        input_data_path = args.train
+        model_output_path = "model.joblib"
+    
     # Load and preprocess the data
-    df = pd.read_csv(args.train)
+    df = pd.read_csv(input_data_path)
     df = preprocess_data(df)
     
     X = df.drop(columns=["Survived"])
@@ -42,6 +52,6 @@ if __name__ == "__main__":
     # Train the model
     model = train_model(X, y, n_estimators=args.n_estimators, max_depth=args.max_depth)
 
-    # Save the model locally
-    joblib.dump(model, "model.joblib")
-    print("Model saved to model.joblib")
+    # Save the model
+    joblib.dump(model, model_output_path)
+    print(f"Model saved to {model_output_path}")
