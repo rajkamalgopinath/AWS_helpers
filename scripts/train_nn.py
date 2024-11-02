@@ -1,4 +1,3 @@
-# Save as train_nn.py
 import os
 import argparse
 import torch
@@ -51,10 +50,17 @@ def train(train_path, val_path, epochs, learning_rate):
     X_val = torch.tensor(X_val, dtype=torch.float32)
     y_val = torch.tensor(y_val, dtype=torch.float32).unsqueeze(1)
     
+    # Check if a GPU is available, and if so, set it as the device
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    
     # Initialize model, loss, and optimizer
-    model = TitanicNet()
+    model = TitanicNet().to(device)  # Move model to GPU if available
     criterion = nn.BCELoss()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    
+    # Transfer training and validation data to the appropriate device
+    X_train, y_train = X_train.to(device), y_train.to(device)
+    X_val, y_val = X_val.to(device), y_val.to(device)
     
     # Training loop
     for epoch in range(epochs):
@@ -64,14 +70,14 @@ def train(train_path, val_path, epochs, learning_rate):
         loss = criterion(outputs, y_train)
         loss.backward()
         optimizer.step()
-        
+
         # Validation
         model.eval()
         with torch.no_grad():
             val_outputs = model(X_val)
             val_loss = criterion(val_outputs, y_val)
             val_accuracy = calculate_accuracy(val_outputs, y_val)  # Calculate accuracy
-            
+
         if (epoch + 1) % 100 == 0 or epoch == epochs - 1:
             print(f"Epoch [{epoch+1}/{epochs}], Loss: {loss.item():.4f}, Val Loss: {val_loss.item():.4f}, Val Accuracy: {val_accuracy:.4f}", flush=True)
             print(f"validation:accuracy = {val_accuracy:.4f}", flush=True)  # Log for SageMaker metric tracking. Needed for hyperparameter tuning later.
@@ -88,6 +94,5 @@ if __name__ == '__main__':
     parser.add_argument('--val', type=str, required=True, help="Path to validation data (.npz file)")
     parser.add_argument('--epochs', type=int, default=10, help="Number of training epochs")
     parser.add_argument('--learning_rate', type=float, default=0.001, help="Learning rate for optimizer")
-    
     args = parser.parse_args()
     train(args.train, args.val, args.epochs, args.learning_rate)
