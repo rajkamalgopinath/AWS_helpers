@@ -3,6 +3,89 @@ from datetime import datetime, timedelta
 import getpass
 import os
 
+def get_s3_bucket_size(bucket_name):
+    """
+    Calculate the total size of an S3 bucket in megabytes and gigabytes.
+
+    Parameters:
+        bucket_name (str): The name of the S3 bucket.
+
+    Returns:
+        dict: A dictionary containing the total size in megabytes and gigabytes.
+    """
+    s3 = boto3.client('s3')
+    total_size_bytes = 0
+
+    # List and sum the size of all objects in the bucket
+    paginator = s3.get_paginator('list_objects_v2')
+    for page in paginator.paginate(Bucket=bucket_name):
+        for obj in page.get('Contents', []):
+            total_size_bytes += obj['Size']
+
+    # Convert the total size to megabytes and gigabytes for readability
+    total_size_mb = total_size_bytes / (1024 ** 2)
+    total_size_gb = total_size_bytes / (1024 ** 3)
+
+    return {
+        'size_mb': total_size_mb,
+        'size_gb': total_size_gb
+    }
+
+
+def calculate_s3_storage_cost(bucket_name):
+    """
+    Calculates the estimated monthly storage cost of an S3 bucket based on its total size.
+
+    Parameters:
+        bucket_name (str): The name of the S3 bucket.
+
+    Returns:
+        float: The estimated monthly storage cost in USD.
+    """
+    s3 = boto3.client('s3')
+
+    # AWS S3 Standard Storage pricing for US East (N. Virginia) region
+    # Pricing tiers as of November 1, 2024
+    first_50_tb_price_per_gb = 0.023  # per GB for the first 50 TB
+    next_450_tb_price_per_gb = 0.022  # per GB for the next 450 TB
+    over_500_tb_price_per_gb = 0.021  # per GB for storage over 500 TB
+
+    # Initialize the total size counter
+    total_size_bytes = 0
+
+    # List and sum the size of all objects in the bucket
+    paginator = s3.get_paginator('list_objects_v2')
+    for page in paginator.paginate(Bucket=bucket_name):
+        for obj in page.get('Contents', []):
+            total_size_bytes += obj['Size']
+
+    # Convert the total size to gigabytes for cost estimation
+    total_size_gb = total_size_bytes / (1024 ** 3)
+
+    # Calculate the cost based on the size
+    if total_size_gb <= 50 * 1024:
+        cost = total_size_gb * first_50_tb_price_per_gb
+    elif total_size_gb <= 500 * 1024:
+        cost = (50 * 1024 * first_50_tb_price_per_gb) + \
+               ((total_size_gb - 50 * 1024) * next_450_tb_price_per_gb)
+    else:
+        cost = (50 * 1024 * first_50_tb_price_per_gb) + \
+               (450 * 1024 * next_450_tb_price_per_gb) + \
+               ((total_size_gb - 500 * 1024) * over_500_tb_price_per_gb)
+
+    return cost
+
+
+# Example usage
+if __name__ == "__main__":
+    bucket_name = 'titanic-dataset-test'
+    sizes = get_s3_bucket_size(bucket_name)
+    print(f"Total size of bucket '{bucket_name}': {sizes['size_mb']:.2f} MB ({sizes['size_gb']:.2f} GB)")
+    cost = calculate_s3_storage_cost(bucket_name)
+    print(f"Estimated monthly storage cost for bucket '{bucket_name}': ${cost:.4f}")
+
+
+
 def get_instance_cost(instance_type, days=1):
     """
     Fetches the cost for a specific instance type over a specified number of days.
