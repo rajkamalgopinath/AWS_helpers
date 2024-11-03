@@ -46,6 +46,8 @@ if __name__ == "__main__":
 
     # Split data for evaluation purposes
     X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=42)
+    print(f'Train size: {X_train.shape}')
+    print(f'Val size: {X_val.shape}')
     dtrain = xgb.DMatrix(X_train, label=y_train)
     dval = xgb.DMatrix(X_val, label=y_val)
 
