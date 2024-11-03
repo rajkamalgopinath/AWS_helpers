@@ -67,39 +67,70 @@ def get_current_costs(days=1):
     total_cost = sum(float(day['Total']['UnblendedCost']['Amount']) for day in response['ResultsByTime'])
     return total_cost
 
-def update_repo(repo_url, commit_message="Updates from Jupyter notebooks"):
+import os
+import getpass
+
+def update_repo(
+    repo_url="github.com/UW-Madison-DataScience/test_AWS.git",
+    name="Chris Endemann", 
+    email="endemann@wisc.edu",
+    commit_message="Updates from Jupyter notebooks"
+):
     """
     Updates a GitHub repository by adding, committing, and pushing changes from the current directory.
-
+    
     Parameters:
     repo_url (str): The GitHub repository URL (HTTPS format without 'https://').
+    name (str): GitHub username for commit configuration.
+    email (str): GitHub email for commit configuration.
     commit_message (str): The commit message to use. Default is "Updates from Jupyter notebooks".
     """
-    # Prompt for GitHub username and personal access token (PAT)
-    username = input("GitHub Username: ")
-    token = getpass.getpass("GitHub Personal Access Token (PAT): ")
+    # Record the starting directory
+    starting_dir = os.getcwd()
+    repo_name = os.path.basename(repo_url).replace('.git', '')  # Extract repository name from URL
+    repo_dir = os.path.join(starting_dir, repo_name)
 
-    # Configure user details
-    os.system('git config --global user.name "Chris Endemann"')
-    os.system('git config --global user.email "endeman@wisc.edu"')
+    # Check if the repository directory exists and change to it if necessary
+    changed_dir = False
+    if os.path.isdir(repo_dir):
+        os.chdir(repo_dir)
+        changed_dir = True
 
-    # Ensure we are in a git repository
-    if not os.path.exists(".git"):
-        print("Not a Git repository. Please initialize with `git init` and add remote origin before running this.")
-        return
+    try:
+        # Prompt for GitHub username and personal access token (PAT)
+        username = input("GitHub Username: ") or "default_username"
+        token = getpass.getpass("GitHub Personal Access Token (PAT): ")
 
-    # Add and commit changes
-    os.system("git add .")
-    os.system(f'git commit -m "{commit_message}"')
+        # Configure Git user details
+        os.system(f'git config --global user.name "{name}"')
+        os.system(f'git config --global user.email "{email}"')
+        
+        # Ensure we are in a git repository
+        if not os.path.exists(".git"):
+            print("Not a Git repository. Please initialize with `git init` and add remote origin before running this.")
+            return
 
-    # Pull any remote changes
-    os.system("git config pull.rebase false")
-    os.system(f"git pull origin main")
+        # Add and commit changes
+        os.system("git add .")
+        os.system(f'git commit -m "{commit_message}"')
 
-    # Push changes to GitHub
-    github_url = f"https://{username}:{token}@{repo_url}"
-    os.system(f"git push {github_url} main")
-    print("Repository updated successfully.")
+        # Pull any remote changes
+        os.system("git config pull.rebase false")
+        os.system("git pull origin main")
+
+        # Push changes to GitHub
+        github_url = f"https://{username}:{token}@{repo_url}"
+        os.system(f"git push {github_url} main")
+        print("Repository updated successfully.")
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+    finally:
+        # Change back to the original directory if it was changed
+        if changed_dir:
+            os.chdir(starting_dir)
+
 
 # Example usage of the functions in this script
 if __name__ == "__main__":
