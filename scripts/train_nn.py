@@ -21,6 +21,45 @@ class TitanicNet(nn.Module):
         x = torch.sigmoid(self.fc3(x))
         return x
 
+# Inside test_AWS/scripts/train_nn.py
+
+import pandas as pd
+import numpy as np
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+
+def preprocess_data(df, scaler=None):
+    """
+    Preprocesses Titanic data by encoding categorical variables, filling missing values,
+    and scaling numerical features.
+
+    Parameters:
+    - df (pd.DataFrame): DataFrame containing the Titanic data.
+    - scaler (StandardScaler or None): Optional scaler to apply. If None, a new scaler is created.
+
+    Returns:
+    - X (np.ndarray): Preprocessed feature array.
+    - y (np.ndarray or None): Target array if 'Survived' column exists, else None.
+    - scaler (StandardScaler): The fitted scaler (new or provided) used for scaling features.
+    """
+    df['Sex'] = LabelEncoder().fit_transform(df['Sex'])
+    df['Embarked'] = df['Embarked'].fillna('S')
+    df['Embarked'] = LabelEncoder().fit_transform(df['Embarked'])
+    df['Age'] = df['Age'].fillna(df['Age'].median())
+    df['Fare'] = df['Fare'].fillna(df['Fare'].median())
+
+    X = df[['Pclass', 'Sex', 'Age', 'SibSp', 'Parch', 'Fare', 'Embarked']].values
+    y = df['Survived'].values if 'Survived' in df else None
+
+    if scaler is None:
+        scaler = StandardScaler()
+        X = scaler.fit_transform(X)
+    else:
+        X = scaler.transform(X)
+
+    return X, y, scaler
+
+
+
 def calculate_accuracy(preds, labels):
     """Calculate binary accuracy for predictions."""
     rounded_preds = torch.round(preds)  # Round predictions to 0 or 1
