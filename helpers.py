@@ -85,6 +85,43 @@ def list_S3_objects(bucket_name):
 
     # If the bucket is empty, return an empty list
     return file_list
+
+def convert_files(direction="notebook_to_python"):
+    """
+    Convert all Jupyter notebooks (.ipynb) to Python scripts (.py), or vice versa, using jupytext.
+    
+    Parameters:
+        direction (str): Conversion direction. 
+                         Use "notebook_to_python" for .ipynb to .py,
+                         and "python_to_notebook" for .py to .ipynb.
+    
+    Returns:
+        list: A list of converted filenames.
+    """
+    converted_files = []
+
+    if direction == "notebook_to_python":
+        # List all .ipynb files in the directory
+        files = [f for f in os.listdir() if f.endswith('.ipynb')]
+        for file in files:
+            output_file = file.replace('.ipynb', '.py')
+            subprocess.run(["jupytext", "--to", "py", file, "--output", output_file])
+            print(f"Converted {file} to {output_file}")
+            converted_files.append(output_file)
+
+    elif direction == "python_to_notebook":
+        # List all .py files in the directory
+        files = [f for f in os.listdir() if f.endswith('.py')]
+        for file in files:
+            output_file = file.replace('.py', '.ipynb')
+            subprocess.run(["jupytext", "--to", "ipynb", file, "--output", output_file])
+            print(f"Converted {file} to {output_file}")
+            converted_files.append(output_file)
+    
+    else:
+        print("Invalid direction specified. Use 'notebook_to_python' or 'python_to_notebook'.")
+    
+    return converted_files
     
 def get_instance_cost(instance_type, days=1):
     """
