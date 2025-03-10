@@ -122,7 +122,54 @@ def convert_files(direction="notebook_to_python"):
         print("Invalid direction specified. Use 'notebook_to_python' or 'python_to_notebook'.")
     
     return converted_files
+
+import boto3
+import math
+
+def calculate_tuning_job_time(tuner):
+    # Initialize SageMaker client
+    sagemaker_client = boto3.client("sagemaker")
     
+    # Retrieve tuning job name and details
+    tuning_job_name = tuner.latest_tuning_job.name  # Replace with your tuning job name if needed
+    tuning_job_desc = sagemaker_client.describe_hyper_parameter_tuning_job(
+        HyperParameterTuningJobName=tuning_job_name
+    )
+    
+    # Extract relevant settings
+    instance_type = tuning_job_desc['TrainingJobDefinition']['ResourceConfig']['InstanceType']
+    max_jobs = tuning_job_desc['HyperParameterTuningJobConfig']['ResourceLimits']['MaxNumberOfTrainingJobs']
+    max_parallel_jobs = tuning_job_desc['HyperParameterTuningJobConfig']['ResourceLimits']['MaxParallelTrainingJobs']
+    
+    # Retrieve all completed training jobs for the tuning job
+    training_jobs = sagemaker_client.list_training_jobs_for_hyper_parameter_tuning_job(
+        HyperParameterTuningJobName=tuning_job_name, StatusEquals='Completed'
+    )["TrainingJobSummaries"]
+    
+    # Calculate total training and billing time
+    total_training_time = 0
+    total_billing_time = 0
+    
+    for job in training_jobs:
+        job_name = job["TrainingJobName"]
+        job_desc = sagemaker_client.describe_training_job(TrainingJobName=job_name)
+        
+        # Calculate training time (in seconds)
+        training_time = job_desc["TrainingEndTime"] - job_desc["TrainingStartTime"]
+        total_training_time += training_time.total_seconds()
+        
+        # Calculate billed time with rounding up
+        billed_time = math.ceil(training_time.total_seconds())
+        total_billing_time += billed_time * job_desc["ResourceConfig"]["InstanceCount"]
+    
+    # Print configuration details and total compute/billing time
+    print(f"Instance Type: {instance_type}")
+    print(f"Max Jobs: {max_jobs}")
+    print(f"Max Parallel Jobs: {max_parallel_jobs}")
+    print(f"Total training time across all jobs: {total_training_time / 3600:.2f} hours")
+    print(f"Estimated total billing time across all jobs: {total_billing_time / 3600:.2f} hours")
+
+
 def get_instance_cost(instance_type, days=1):
     """
     Fetches the cost for a specific instance type over a specified number of days.
