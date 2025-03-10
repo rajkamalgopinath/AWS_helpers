@@ -2,6 +2,8 @@ import boto3
 from datetime import datetime, timedelta
 import getpass
 import os
+import subprocess
+
 
 def get_s3_bucket_size(bucket_name):
     """
