@@ -89,6 +89,8 @@ def list_S3_objects(bucket_name):
     return file_list
 
 def convert_files(direction="notebook_to_python"):
+    import subprocess
+
     """
     Convert all Jupyter notebooks (.ipynb) to Python scripts (.py), or vice versa, using jupytext.
     
