@@ -36,7 +36,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    # Detect if running on SageMaker or locally
+    # Detect if running on SageMaker or locally. SageMaker only sets the SM_CHANNEL_TRAIN and SM_MODEL_DIR environment variables when a training job runs in its managed environment. If the script runs locally, these variables do not exist, so os.environ.get() returns the fallback value (".", which means "current directory").
     input_data_path = os.path.join(os.environ.get("SM_CHANNEL_TRAIN", "."), args.train)
     output_data_path = os.path.join(os.environ.get("SM_MODEL_DIR", "."), "xgboost-model")
 
